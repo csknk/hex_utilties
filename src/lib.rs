@@ -66,8 +66,12 @@ pub fn bytes_to_hexstring(bytes: &[u8], form: Option<&str>) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn correct_capital_hexstring() {
+        let ans: String = "DEADBEEF".to_string();
+        let bytes = vec![0xde, 0xad, 0xbe, 0xef];
+        assert_eq!(ans, bytes_to_hexstring(&bytes, Some("X")));
     }
 }

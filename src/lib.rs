@@ -13,6 +13,29 @@
 
 #![allow(dead_code)]
 
+use core::fmt;
+
+pub trait ToHex {
+    fn to_hex(&self) -> String;
+}
+
+impl<T: fmt::LowerHex> ToHex for T {
+    fn to_hex(&self) -> String {
+        format!("{:x}", self)
+    }
+}
+
+impl ToHex for [u8] {
+    fn to_hex(&self) -> String {
+        use core::fmt::Write;
+        let mut ret = String::with_capacity(2 * self.len());
+
+        for ch in self {
+            write!(ret, "{:02x}", ch).expect("writing to string");
+        }
+        ret
+    }
+}
 
 /// Return an integer from a hex character.
 fn hex_char_to_int(c: char) -> Result<u8, &'static str> {
@@ -73,5 +96,12 @@ mod tests {
         let ans: String = "DEADBEEF".to_string();
         let bytes = vec![0xde, 0xad, 0xbe, 0xef];
         assert_eq!(ans, bytes_to_hexstring(&bytes, Some("X")));
+    }
+
+    #[test]
+    fn test_trait_extension() {
+        let ans: String = "64617262".to_string();
+        let bytes = vec![0x64, 0x61, 0x72, 0x62];
+        assert_eq!(ans, bytes.to_hex());
     }
 }

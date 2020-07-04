@@ -11,22 +11,33 @@
 //! hex_utilities is a crate that contains (wait for it) hex utilities.
 //! Utilties for converting bytes into hexadecimal strings and vice versa.
 
-#![allow(dead_code)]
+
+#![deny(non_upper_case_globals)]
+#![deny(non_camel_case_types)]
+#![deny(non_snake_case)]
+#![deny(unused_mut)]
+#![deny(missing_docs)]
 
 use core::fmt;
 
-pub trait ToHex {
-    fn to_hex(&self) -> String;
+/// An extension trait to allow collection objects to be represented as a hexadecimal string. 
+pub trait ToHexExt {
+    /// Return a hexadecimal string representation
+    fn to_hexstring(&self) -> String;
 }
 
-impl<T: fmt::LowerHex> ToHex for T {
-    fn to_hex(&self) -> String {
+/// Implement extension trait for a generic type, with the fmt::LowerHex trait implemented on
+/// the type.
+impl<T: fmt::LowerHex> ToHexExt for T {
+    fn to_hexstring(&self) -> String {
         format!("{:x}", self)
     }
 }
 
-impl ToHex for [u8] {
-    fn to_hex(&self) -> String {
+/// Implement the extension trait for a slice of u8
+impl ToHexExt for [u8] {
+    /// Return a hexadecimal String representation of the collection
+    fn to_hexstring(&self) -> String {
         use core::fmt::Write;
         let mut ret = String::with_capacity(2 * self.len());
 
@@ -48,11 +59,10 @@ fn hex_char_to_int(c: char) -> Result<u8, &'static str> {
     Err("Invalid character in hexstring.")
 } 
 
-/// Makes a vector of bytes from a valid hexstring.
-/// Walks through characters pairwise - for each pair, the leftmost char
-/// represents a factor of 16. The rightmost byte represents units.
-/// Therefore (L * 16) + R is equal to the integer value of the 
-/// byte represented by the LR pair of hexadecimal digits.
+/// Makes a vector of bytes from a valid hexstring. Walks through characters pairwise.
+/// For each pair, the leftmost char represents a factor of 16. The rightmost byte represents units.
+/// Therefore (L * 16) + R is equal to the integer value of the byte represented by
+/// the LR pair of hexadecimal digits.
 pub fn hexstring_to_bytes(str: String) -> Result<Vec<u8>, &'static str> {
     if str.len() % 2 != 0 {
         return Err("Wrong size hexstring.");
@@ -102,6 +112,15 @@ mod tests {
     fn test_trait_extension() {
         let ans: String = "64617262".to_string();
         let bytes = vec![0x64, 0x61, 0x72, 0x62];
-        assert_eq!(ans, bytes.to_hex());
+        assert_eq!(ans, bytes.to_hexstring());
+    }
+
+    #[test]
+    fn test_single_byte() {
+        let ans: String = "ff".to_string();
+        let input_val: u8 = 255;
+        let res = input_val.to_hexstring();
+        println!("Test: {} represented as {}", input_val, res);
+        assert_eq!(ans, res);
     }
 }

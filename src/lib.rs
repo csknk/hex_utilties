@@ -11,7 +11,6 @@
 //! hex_utilities is a crate that contains (wait for it) hex utilities.
 //! Utilties for converting bytes into hexadecimal strings and vice versa.
 
-
 #![deny(non_upper_case_globals)]
 #![deny(non_camel_case_types)]
 #![deny(non_snake_case)]
@@ -20,11 +19,38 @@
 
 use core::fmt;
 
+/// Define Errors
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Error {
+    /// Not a valid hex character
+    InvalidChar(u8),
+
+    /// Odd length - invalid
+    InvalidStringLength(usize),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Error::InvalidChar(c) => write!(f, "Invalid hex character: {}", c),
+            Error::InvalidStringLength(len) => write!(f, "Invalid hexstring length: {}", len),
+        }
+    }    
+}
+
+
 /// An extension trait to allow collection objects to be represented as a hexadecimal string. 
 pub trait ToHexExt {
     /// Return a hexadecimal string representation
     fn to_hexstring(&self) -> String;
 }
+
+/// An extension trait to create a collection of bytes from a valid hexadecimal string.
+//pub trait HexToBytesExt {
+//    /// Return a vector of bytes
+//    fn to_bytes(&self) -> Result<Self, Error>;
+//}
+
 
 /// Implement extension trait for a generic type, with the fmt::LowerHex trait implemented on
 /// the type.
@@ -48,6 +74,14 @@ impl ToHexExt for [u8] {
     }
 }
 
+/// Implement the extension trait on Vec<u8>
+//impl HexToBytesExt for Vec<u8> {
+//    /// Bytes collection from e.g. String
+//    fn to_bytes() -> Result<Self, Error> {
+//        hexstring_to_bytes(Self)
+//    }
+//}
+
 /// Return an integer from a hex character.
 fn hex_char_to_int(c: char) -> Result<u8, &'static str> {
     let digit: u8 = c.to_ascii_lowercase() as u8;
@@ -63,9 +97,10 @@ fn hex_char_to_int(c: char) -> Result<u8, &'static str> {
 /// For each pair, the leftmost char represents a factor of 16. The rightmost byte represents units.
 /// Therefore (L * 16) + R is equal to the integer value of the byte represented by
 /// the LR pair of hexadecimal digits.
-pub fn hexstring_to_bytes(str: String) -> Result<Vec<u8>, &'static str> {
+//pub fn hexstring_to_bytes(str: String) -> Result<Vec<u8>, &'static str> {
+pub fn hexstring_to_bytes(str: String) -> Result<Vec<u8>, Error> {
     if str.len() % 2 != 0 {
-        return Err("Wrong size hexstring.");
+        return Err(Error::InvalidStringLength(str.len()));
     }
     let mut bytes: Vec<u8> = Vec::new();
     let mut current_byte: u8;
@@ -109,18 +144,32 @@ mod tests {
     }
 
     #[test]
-    fn test_trait_extension() {
+    fn correct_trait_extension_bytes_to_hexstring() {
         let ans: String = "64617262".to_string();
         let bytes = vec![0x64, 0x61, 0x72, 0x62];
         assert_eq!(ans, bytes.to_hexstring());
     }
 
     #[test]
-    fn test_single_byte() {
+    fn correct_single_byte_to_hexstring() {
         let ans: String = "ff".to_string();
         let input_val: u8 = 255;
         let res = input_val.to_hexstring();
         println!("Test: {} represented as {}", input_val, res);
         assert_eq!(ans, res);
+    }
+
+    #[test]
+    fn correct_hexstring_to_bytes() {
+        let ans: Vec<u8> = vec![0xde, 0xad, 0xbe, 0xef];
+        let bytes = hexstring_to_bytes("deadbeef".to_string()).unwrap();
+        assert_eq!(ans, bytes);
+    }
+    #[test]
+    fn wrong_length_hexstring() {
+        assert_eq!(
+            hexstring_to_bytes("deadbee".to_string()),
+            Err(Error::InvalidStringLength(7))
+        );
     }
 }

@@ -21,7 +21,7 @@ use core::fmt;
 
 /// Define Errors
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Error {
+pub enum StringError {
     /// Not a valid hex character
     InvalidChar(u8),
 
@@ -29,11 +29,11 @@ pub enum Error {
     InvalidStringLength(usize),
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for StringError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::InvalidChar(c) => write!(f, "Invalid hex character: {}", c),
-            Error::InvalidStringLength(len) => write!(f, "Invalid hexstring length: {}", len),
+            StringError::InvalidChar(c) => write!(f, "Invalid hex character: {}", c),
+            StringError::InvalidStringLength(len) => write!(f, "Invalid hexstring length: {}", len),
         }
     }    
 }
@@ -52,8 +52,7 @@ pub trait ToHexExt {
 //}
 
 
-/// Implement extension trait for a generic type, with the fmt::LowerHex trait implemented on
-/// the type.
+/// Implement extension trait for a generic type, with the fmt::LowerHex trait implemented on the type.
 impl<T: fmt::LowerHex> ToHexExt for T {
     fn to_hexstring(&self) -> String {
         format!("{:x}", self)
@@ -93,14 +92,12 @@ fn hex_char_to_int(c: char) -> Result<u8, &'static str> {
     Err("Invalid character in hexstring.")
 } 
 
-/// Makes a vector of bytes from a valid hexstring. Walks through characters pairwise.
-/// For each pair, the leftmost char represents a factor of 16. The rightmost byte represents units.
-/// Therefore (L * 16) + R is equal to the integer value of the byte represented by
-/// the LR pair of hexadecimal digits.
-//pub fn hexstring_to_bytes(str: String) -> Result<Vec<u8>, &'static str> {
-pub fn hexstring_to_bytes(str: String) -> Result<Vec<u8>, Error> {
+/// Makes a vector of bytes from a valid hexstring. Walks through characters pairwise. For each pair, the
+/// leftmost char represents a factor of 16. The rightmost byte represents units. Therefore (L * 16) + R is
+/// equal to the integer value of the byte represented by the LR pair of hexadecimal digits.
+pub fn hexstring_to_bytes(str: String) -> Result<Vec<u8>, StringError> {
     if str.len() % 2 != 0 {
-        return Err(Error::InvalidStringLength(str.len()));
+        return Err(StringError::InvalidStringLength(str.len()));
     }
     let mut bytes: Vec<u8> = Vec::new();
     let mut current_byte: u8;
@@ -165,11 +162,12 @@ mod tests {
         let bytes = hexstring_to_bytes("deadbeef".to_string()).unwrap();
         assert_eq!(ans, bytes);
     }
+
     #[test]
     fn wrong_length_hexstring() {
         assert_eq!(
             hexstring_to_bytes("deadbee".to_string()),
-            Err(Error::InvalidStringLength(7))
+            Err(StringError::InvalidStringLength(7))
         );
     }
 }

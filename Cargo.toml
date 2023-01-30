@@ -7,3 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[[example]]
+name = "hex_utilities_demo"
+path = "examples/hex-utilities.rs"
+

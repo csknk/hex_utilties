@@ -18,6 +18,7 @@
 #![deny(missing_docs)]
 
 use core::fmt;
+use std::error;
 use std::vec;
 
 /// Define Errors
@@ -28,6 +29,12 @@ pub enum StringError {
 
     /// Odd length - invalid
     InvalidStringLength(usize),
+
+    /// Invalid base 64 character present
+    InvalidBase64Char(u8),
+
+    /// Wrong length for base 64 string
+    InvalidBase64StringLength(usize),
 }
 
 impl fmt::Display for StringError {
@@ -35,9 +42,14 @@ impl fmt::Display for StringError {
         match *self {
             StringError::InvalidChar(c) => write!(f, "Invalid hex character: {}", c),
             StringError::InvalidStringLength(len) => write!(f, "Invalid hexstring length: {}", len),
+            StringError::InvalidBase64Char(c) => write!(f, "Invalid base64 character: {}", c),
+            StringError::InvalidBase64StringLength(len) => {
+                write!(f, "Invalid base 64 length: {}", len)
+            }
         }
     }
 }
+impl error::Error for StringError {}
 
 /// An extension trait to allow collection objects to be represented as a hexadecimal string.
 pub trait ToHexExt {
@@ -102,6 +114,38 @@ pub fn hexstring_to_bytes(str: String) -> Result<Vec<u8>, StringError> {
     Ok(bytes)
 }
 
+/// Returns false and an appropriate error if the provided String is either an odd length or
+/// contains an invalid character
+pub fn is_valid_hexstring(input: String) -> Result<bool, StringError> {
+    if input.len() % 2 != 0 {
+        return Err(StringError::InvalidStringLength(input.len()));
+    }
+    match is_allowed_hex_character(input) {
+        Ok(_) => {}
+        Err(err) => {
+            return Err(err);
+        }
+    }
+
+    Ok(true)
+}
+
+/// Returns false if any character in the provided string is not a valid hex character
+// pub fn is_allowed_hex_character(c: char) -> bool {
+pub fn is_allowed_hex_character(input: String) -> Result<bool, StringError> {
+    let allowed_hex_chars: [u8; 22] = [
+        b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E',
+        b'F', b'a', b'b', b'c', b'd', b'e', b'f',
+    ];
+    for c in input.chars() {
+        let c_byte: u8 = c as u8;
+        if !allowed_hex_chars.iter().any(|&x| c_byte == x) {
+            return Err(StringError::InvalidChar(c_byte));
+        }
+    }
+    Ok(true)
+}
+
 /// Return a hexstring representation of a slice of bytes
 pub fn bytes_to_hexstring(bytes: &[u8], form: Option<&str>) -> String {
     let mut caps = false;
@@ -123,7 +167,7 @@ pub fn bytes_to_hexstring(bytes: &[u8], form: Option<&str>) -> String {
 }
 
 /// See: /home/david/Learning/c/radix-64-encoding/base64.c
-fn bytes_to_b64(bytes: Vec<u8>) -> String {
+pub fn bytes_to_b64(bytes: Vec<u8>) -> String {
     if bytes.len() == 0 {
         return "".to_string();
     }
@@ -175,7 +219,8 @@ fn bytes_to_b64(bytes: Vec<u8>) -> String {
     return s;
 }
 
-fn len_chars_base64(input_length: usize) -> usize {
+/// returns the number of base 64 characters required to represent the given number of bytes
+pub fn len_chars_base64(input_length: usize) -> usize {
     let ret: usize;
     if (input_length % 3) != 0 {
         ret = ((input_length / 3) + 1) * 4;
@@ -185,9 +230,23 @@ fn len_chars_base64(input_length: usize) -> usize {
     return ret;
 }
 
+/// returns a byte slice from the given base 64 string
+pub fn b64_to_bytes(b64_string: String) -> Result<Vec<u8>, StringError> {
+    let bytes = b64_string.into_bytes();
+    for b in &bytes {
+        println!("{:?}", b);
+    }
+    Ok(bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn b64_to_bytes_test() {
+        let _ = b64_to_bytes("david".to_string());
+    }
 
     #[test]
     fn len_chars_base64_test() {

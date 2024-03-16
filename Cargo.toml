@@ -10,5 +10,5 @@ edition = "2018"
 
 [[example]]
 name = "hex_utilities_demo"
-path = "examples/hex-utilities.rs"
+path = "examples/hex-utilities-example.rs"
 

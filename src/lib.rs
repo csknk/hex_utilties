@@ -1,4 +1,4 @@
-// Copyright 2020 David Egan
+// Copyright 2024 David Egan
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,14 +25,11 @@ use std::vec;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum StringError {
     /// Not a valid hex character
-    InvalidChar(u8),
-
+    InvalidHexChar(u8),
     /// Odd length - invalid
     InvalidStringLength(usize),
-
     /// Invalid base 64 character present
     InvalidBase64Char(u8),
-
     /// Wrong length for base 64 string
     InvalidBase64StringLength(usize),
 }
@@ -40,7 +37,7 @@ pub enum StringError {
 impl fmt::Display for StringError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            StringError::InvalidChar(c) => write!(f, "Invalid hex character: {}", c),
+            StringError::InvalidHexChar(c) => write!(f, "Invalid hex character: {}", c),
             StringError::InvalidStringLength(len) => write!(f, "Invalid hexstring length: {}", len),
             StringError::InvalidBase64Char(c) => write!(f, "Invalid base64 character: {}", c),
             StringError::InvalidBase64StringLength(len) => {
@@ -120,19 +117,15 @@ pub fn is_valid_hexstring(input: String) -> Result<bool, StringError> {
     if input.len() % 2 != 0 {
         return Err(StringError::InvalidStringLength(input.len()));
     }
-    match is_allowed_hex_character(input) {
-        Ok(_) => {}
-        Err(err) => {
-            return Err(err);
-        }
+    if let Err(err) = contains_allowed_hex_characters(input) {
+        return Err(err);
     }
 
     Ok(true)
 }
 
 /// Returns false if any character in the provided string is not a valid hex character
-// pub fn is_allowed_hex_character(c: char) -> bool {
-pub fn is_allowed_hex_character(input: String) -> Result<bool, StringError> {
+pub fn contains_allowed_hex_characters(input: String) -> Result<bool, StringError> {
     let allowed_hex_chars: [u8; 22] = [
         b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E',
         b'F', b'a', b'b', b'c', b'd', b'e', b'f',
@@ -140,7 +133,7 @@ pub fn is_allowed_hex_character(input: String) -> Result<bool, StringError> {
     for c in input.chars() {
         let c_byte: u8 = c as u8;
         if !allowed_hex_chars.iter().any(|&x| c_byte == x) {
-            return Err(StringError::InvalidChar(c_byte));
+            return Err(StringError::InvalidHexChar(c_byte));
         }
     }
     Ok(true)
@@ -281,6 +274,42 @@ mod tests {
         }
         let bytes = vec![0xde, 0xad, 0xbe, 0xef];
         assert_eq!("3q2+7w==".to_string(), bytes_to_b64(bytes))
+    }
+
+    #[test]
+    fn test_valid_hexstring() {
+        assert_eq!(is_valid_hexstring("abcdef".to_string()), Ok(true));
+    }
+
+    #[test]
+    fn test_invalid_length() {
+        assert_eq!(
+            is_valid_hexstring("abc".to_string()),
+            Err(StringError::InvalidStringLength(3))
+        );
+    }
+
+    #[test]
+    fn test_invalid_characters() {
+        assert_eq!(
+            is_valid_hexstring("ghijkl".to_string()),
+            Err(StringError::InvalidCharacter('g'))
+        );
+    }
+
+    #[test]
+    fn test_contains_allowed_hex_characters_valid_input() {
+        let input = String::from("0123456789ABCDEFabcdef");
+        assert_eq!(contains_allowed_hex_characters(input), Ok(true));
+    }
+
+    #[test]
+    fn test_contains_allowed_hex_characters_invalid_input() {
+        let input = String::from("G");
+        assert_eq!(
+            contains_allowed_hex_characters(input),
+            Err(StringError::InvalidHexChar(b'G'))
+        );
     }
 
     #[test]
